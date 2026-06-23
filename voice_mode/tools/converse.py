@@ -2004,13 +2004,41 @@ consult the MCP resources listed above.
                         timings['record'] = tts_metrics.get('interrupted_at', 0)  # Recording during TTS
                         timings['barge_in'] = True
 
-                        # Skip listening chime since user is already speaking
-                        # Skip pause and normal recording since we have audio
+                        # User is already mid-sentence: skip the pause and listening
+                        # chime, but KEEP recording to capture the rest of the utterance.
+                        # The captured buffer is only the speech that overlapped TTS, so
+                        # prepend it to the continuation before STT (upstream PR #281).
+                        logger.info(f"📊 Barge-in fragment: {len(audio_data)} samples ({len(audio_data) / SAMPLE_RATE:.2f}s) captured during TTS; continuing to record")
 
-                        # Mark the end of "recording" (which was actually during TTS)
+                        if event_logger:
+                            event_logger.log_event(event_logger.RECORDING_START)
+                        record_start = time.perf_counter()
+                        continuation, cont_speech = await asyncio.get_event_loop().run_in_executor(
+                            None, record_audio_with_silence_detection, listen_duration_max, disable_silence_detection, listen_duration_min, vad_aggressiveness
+                        )
+                        timings['record'] += time.perf_counter() - record_start
+                        if continuation is not None and len(continuation) > 0:
+                            audio_data = np.concatenate([audio_data, continuation])
+                            speech_detected = speech_detected or cont_speech
+                        if event_logger:
+                            event_logger.log_event(event_logger.RECORDING_END, {
+                                "duration": timings['record'],
+                                "samples": len(audio_data)
+                            })
+
+                        # Play "finished" feedback sound (the listening chime was skipped)
+                        await play_audio_feedback(
+                            "finished",
+                            openai_clients,
+                            chime_enabled,
+                            "whisper",
+                            chime_leading_silence=chime_leading_silence,
+                            chime_trailing_silence=chime_trailing_silence
+                        )
+
+                        # Mark the end of recording (fragment + continuation)
                         user_done_time = time.perf_counter()
-                        logger.info(f"📊 Barge-in audio captured at {timings['record']:.1f}s into TTS playback")
-                        logger.info(f"📊 Captured {len(audio_data)} samples ({len(audio_data) / SAMPLE_RATE:.2f}s) of user speech")
+                        logger.info(f"📊 Barge-in total: {len(audio_data)} samples ({len(audio_data) / SAMPLE_RATE:.2f}s) after continuation")
 
                 # Normal flow: user didn't interrupt, record their response
                 if not barge_in_occurred:

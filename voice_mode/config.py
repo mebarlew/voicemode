@@ -891,7 +891,11 @@ BARGE_IN_VAD_AGGRESSIVENESS = _barge_in_vad
 # Minimum speech duration in milliseconds before triggering barge-in
 # Helps prevent false positives from brief sounds or noise
 # Default: 150ms - short enough for responsiveness, long enough to filter noise
-BARGE_IN_MIN_SPEECH_MS = int(os.getenv("VOICEMODE_BARGE_IN_MIN_MS", "150"))
+_barge_in_min_ms = int(os.getenv("VOICEMODE_BARGE_IN_MIN_MS", "150"))
+# Guard against negative values (would fire barge-in before any real speech)
+if _barge_in_min_ms < 0:
+    _barge_in_min_ms = 150
+BARGE_IN_MIN_SPEECH_MS = _barge_in_min_ms
 
 # Audio format configuration
 AUDIO_FORMAT = os.getenv("VOICEMODE_AUDIO_FORMAT", "pcm").lower()
