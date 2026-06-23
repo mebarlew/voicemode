@@ -897,6 +897,10 @@ if _barge_in_min_ms < 0:
     _barge_in_min_ms = 150
 BARGE_IN_MIN_SPEECH_MS = _barge_in_min_ms
 
+# Stop an idle voice loop after this many consecutive no-speech turns, so the
+# mic doesn't keep cycling forever when the user has stepped away (0 = never).
+MAX_SILENT_TURNS = int(os.getenv("VOICEMODE_MAX_SILENT_TURNS", "5"))
+
 # Audio format configuration
 AUDIO_FORMAT = os.getenv("VOICEMODE_AUDIO_FORMAT", "pcm").lower()
 TTS_AUDIO_FORMAT = os.getenv("VOICEMODE_TTS_AUDIO_FORMAT", "pcm").lower()  # Default to PCM for optimal streaming

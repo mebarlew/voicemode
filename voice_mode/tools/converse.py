@@ -1276,6 +1276,11 @@ def record_audio_with_silence_detection(max_duration: float, disable_silence_det
         # For fallback, assume speech is present since we can't detect
         return (record_audio(max_duration), True)
 
+# Consecutive turns with no speech detected (reset on real input). Used to stop
+# an idle voice loop after config.MAX_SILENT_TURNS instead of looping forever.
+_silent_turn_streak = 0
+
+
 @mcp.tool()
 async def converse(
     message: str,
@@ -2467,7 +2472,9 @@ consult the MCP resources listed above.
             if event_logger and session_id:
                 event_logger.end_session()
             
+            global _silent_turn_streak
             if response_text:
+                _silent_turn_streak = 0
                 # Save conversation transcription if enabled
                 if SAVE_TRANSCRIPTIONS:
                     conversation_text = f"Assistant: {message}\n\nUser: {response_text}"
@@ -2503,10 +2510,20 @@ consult the MCP resources listed above.
                     result = f"Voice response: {response_text}{stt_info} | Timing: {timing_str}"
                 success = True
             else:
-                if effective_metrics_level == "minimal":
+                _silent_turn_streak += 1
+                from voice_mode.config import MAX_SILENT_TURNS
+                if MAX_SILENT_TURNS and _silent_turn_streak >= MAX_SILENT_TURNS:
+                    _silent_turn_streak = 0
+                    logger.info(f"No speech for {MAX_SILENT_TURNS} turns in a row - stopping idle voice loop")
+                    result = (
+                        f"No speech detected for {MAX_SILENT_TURNS} turns in a row - the user has "
+                        f"stepped away. STOP the voice loop now: do NOT call the converse tool "
+                        f"again. Wait silently for the user to type a message."
+                    )
+                elif effective_metrics_level == "minimal":
                     result = "No speech detected"
                 else:
-                    result = f"No speech detected | Timing: {timing_str}"
+                    result = f"No speech detected ({_silent_turn_streak}/{MAX_SILENT_TURNS}) | Timing: {timing_str}"
                 success = True  # Not an error, just no speech
             return result
                 
