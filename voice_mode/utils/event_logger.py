@@ -78,6 +78,13 @@ class EventLogger:
     CONCH_ACQUIRE = "CONCH_ACQUIRE"        # Successfully acquired conch
     CONCH_RELEASE = "CONCH_RELEASE"        # Released conch
 
+    # Barge-in Events (interrupt TTS with user speech)
+    BARGE_IN_START = "BARGE_IN_START"            # Monitoring started for barge-in
+    BARGE_IN_DETECTED = "BARGE_IN_DETECTED"      # User speech detected, TTS interrupted
+    BARGE_IN_STOP = "BARGE_IN_STOP"              # Monitoring stopped
+    BARGE_IN_FALSE_POSITIVE = "BARGE_IN_FALSE_POSITIVE"  # Barge-in triggered but no speech in STT
+    BARGE_IN_STT_ERROR = "BARGE_IN_STT_ERROR"    # STT failed on barge-in audio
+
     def __init__(self, log_dir: Optional[Path] = None, enabled: bool = True):
         """
         Initialize the event logger.
