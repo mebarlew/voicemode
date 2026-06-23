@@ -670,6 +670,12 @@ STT_MODELS = parse_comma_list("VOICEMODE_STT_MODELS", "")
 # See: https://platform.openai.com/docs/guides/speech-to-text#prompting
 STT_PROMPT = os.getenv("VOICEMODE_STT_PROMPT", "")
 
+# Warm the local STT/TTS models at startup so the first voice turn is not slow.
+# Fires one throwaway request at each local service when the MCP server boots.
+# The first inference loads the model and, on Apple Silicon, compiles the
+# CoreML/Metal graph; doing it up front keeps that cost off the user's first turn.
+PREWARM_ENABLED = env_bool("VOICEMODE_PREWARM", True)
+
 # Voice preferences cache
 _cached_voice_preferences: Optional[list] = None
 _voice_preferences_loaded = False

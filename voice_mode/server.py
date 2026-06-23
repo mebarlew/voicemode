@@ -93,6 +93,13 @@ def main():
     else:
         logger.info("Event logging disabled")
     
+    # Warm the local voice models so the first turn isn't a cold-start freeze
+    from .config import PREWARM_ENABLED
+    if PREWARM_ENABLED:
+        from .warmup import warm_up_in_background
+        warm_up_in_background()
+        logger.info("Warm-up started in background")
+
     # Run the server
     mcp.run(transport="stdio")
 
