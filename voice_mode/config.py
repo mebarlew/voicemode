@@ -882,7 +882,7 @@ BARGE_IN_ENABLED = env_bool("VOICEMODE_BARGE_IN", False)
 # 1: Permissive - good for quiet environments
 # 2: Moderate - balanced for most environments (default)
 # 3: Aggressive - only triggers on clear speech
-_barge_in_vad = int(os.getenv("VOICEMODE_BARGE_IN_VAD", "2"))
+_barge_in_vad = int(os.getenv("VOICEMODE_BARGE_IN_VAD", "3"))
 # Validate VAD aggressiveness is in valid range (0-3)
 if _barge_in_vad < 0 or _barge_in_vad > 3:
     _barge_in_vad = 2  # Reset to default if out of range
@@ -891,7 +891,7 @@ BARGE_IN_VAD_AGGRESSIVENESS = _barge_in_vad
 # Minimum speech duration in milliseconds before triggering barge-in
 # Helps prevent false positives from brief sounds or noise
 # Default: 150ms - short enough for responsiveness, long enough to filter noise
-_barge_in_min_ms = int(os.getenv("VOICEMODE_BARGE_IN_MIN_MS", "150"))
+_barge_in_min_ms = int(os.getenv("VOICEMODE_BARGE_IN_MIN_MS", "400"))
 # Guard against negative values (would fire barge-in before any real speech)
 if _barge_in_min_ms < 0:
     _barge_in_min_ms = 150

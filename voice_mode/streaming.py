@@ -274,21 +274,16 @@ async def stream_pcm_audio(
     first_chunk_time = None
     save_buffer = io.BytesIO() if save_audio else None
 
-    # Barge-in state
+    # Barge-in state. The monitor is armed only once real audio starts playing
+    # (see the first-chunk handler below), NOT here -- starting it now would let
+    # it listen during the ~1-2s TTS generation gap before any sound plays and
+    # false-fire on room noise, killing the turn before the bot ever speaks.
     interrupt_event = threading.Event()
 
     def on_interrupt():
         """Callback when barge-in voice is detected."""
         logger.info("⚡ Barge-in detected during streaming TTS")
         interrupt_event.set()
-
-    # Start barge-in monitoring if provided
-    if barge_in_monitor:
-        try:
-            barge_in_monitor.start_monitoring(on_voice_detected=on_interrupt)
-            logger.debug("Started barge-in monitoring for streaming TTS")
-        except Exception as e:
-            logger.warning(f"Failed to start barge-in monitoring: {e}")
 
     try:
         # Setup sounddevice stream for PCM playback
@@ -347,6 +342,15 @@ async def stream_pcm_audio(
                         event_logger = get_event_logger()
                         if event_logger:
                             event_logger.log_event(event_logger.TTS_FIRST_AUDIO)
+
+                        # Arm barge-in now that audio is actually playing, so it
+                        # can't false-fire during the silent generation gap.
+                        if barge_in_monitor:
+                            try:
+                                barge_in_monitor.start_monitoring(on_voice_detected=on_interrupt)
+                                logger.debug("Armed barge-in monitoring at first audio chunk")
+                            except Exception as e:
+                                logger.warning(f"Failed to start barge-in monitoring: {e}")
 
                     # Convert bytes to numpy array for sounddevice
                     # PCM data is already in the right format
